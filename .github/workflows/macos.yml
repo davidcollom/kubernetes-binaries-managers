@@ -6,6 +6,10 @@ on:
   push:
     branches:
       - main
+concurrency:
+  group: ${{ github.workflow }}-macos
+  cancel-in-progress: true
+
 
 jobs:
   int-test:

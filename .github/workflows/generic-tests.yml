@@ -7,6 +7,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-static
+  cancel-in-progress: true
+
 jobs:
   unit-test:
     runs-on: ubuntu-24.04
