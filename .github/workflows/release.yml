@@ -10,7 +10,7 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     steps:
-      - name: Set up Go 1.18
+      - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
@@ -21,17 +21,17 @@ jobs:
           submodules: recursive
           fetch-depth: 0
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v6
         with:
           version: latest
           args: release
         env:
-          GITHUB_TOKEN: ${{ secrets.COMMITER_TOKEN }}
-      - name: Bump formulaes
-        uses: Homebrew/actions/bump-formulae@master
+          GITHUB_TOKEN: ${{ secrets.COMMITTER_TOKEN }}
+      - name: Bump formulae
+        uses: Homebrew/actions/bump-packages@master
         with:
-          token: ${{ secrets.COMMITER_TOKEN }}
-          formula: |
+          token: ${{ secrets.COMMITTER_TOKEN }}
+          formulae: >
             helmenv
             kbenv
             ocenv
