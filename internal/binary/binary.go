@@ -1,8 +1,10 @@
 package binary
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"math/big"
 
 	// "math/rand/v2"
@@ -14,7 +16,9 @@ import (
 	"path/filepath"
 
 	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers" // nolint:staticcheck
-	"github.com/mholt/archiver/v3"
+	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/logging"
+	"github.com/mholt/archives"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -140,7 +144,7 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 			return err
 		}
 
-		err = archiver.Unarchive(file+fileExt, file)
+		err = decompress(file+fileExt, file)
 		if err != nil {
 			return err
 		}
@@ -161,22 +165,17 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 		// oc returns a compressed file, so save it somewhere and decompress it
 		var fileExt string
 
-		randomNumbers := int64(5000) // nolint:mnd
-
-		randomInt, err := rand.Int(rand.Reader, big.NewInt(randomNumbers))
-		if err != nil {
-			return err
-		}
-
-		tempDir, err := os.MkdirTemp("", "oc")
+		tempDir, err := os.MkdirTemp("", "oc-*")
 		if err != nil {
 			return err
 		}
 		// clean temp dir
 		defer os.RemoveAll(tempDir)
 
+		logging.Debug("created temp dir", "path", tempDir)
+
 		osArch, _ := GetOSArch()
-		file := fmt.Sprintf("%s/oc-%d", tempDir, randomInt.Int64())
+		file := fmt.Sprintf("%s/oc", tempDir)
 		file, _ = filepath.Abs(file)
 
 		if strings.Contains(osArch, "windows") {
@@ -184,13 +183,14 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 		} else {
 			fileExt = targz
 		}
-
+		// Write the Archive to disk
+		logging.Debug("writing archive to disk", "path", file+fileExt)
 		err = os.WriteFile(file+fileExt, body, 0750) // nolint: gosec,mnd
 		if err != nil {
 			return err
 		}
 
-		err = archiver.Unarchive(file+fileExt, file)
+		err = decompress(file+fileExt, file)
 		if err != nil {
 			return err
 		}
@@ -211,6 +211,68 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func decompress(file, destination string) error {
+	l := logging.L.WithField("method", "decompress")
+	// TODO: Fix this to actually use the destination
+	_ = destination
+	fsys, err := archives.FileSystem(context.Background(), file, nil)
+	if err != nil {
+		return err
+	}
+
+	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+		fullDst := filepath.Join(destination, path)
+		if err != nil {
+			return err
+		}
+		// Skip root
+		if path == "." {
+			l.WithFields(logrus.Fields{"path": path, "name": d.Name()}).Debug("Skipping root")
+			return nil
+		}
+		// Skip .git directories
+		if d.IsDir() && path == ".git" {
+			l.WithFields(logrus.Fields{"path": path, "name": d.Name()}).Debug("Skipping .git directory")
+			return fs.SkipDir
+		}
+
+		// No Need to extract directories, just files
+		if d.IsDir() {
+			l.WithFields(logrus.Fields{"path": path, "name": d.Name()}).Debug("Looking in directory")
+			err = os.MkdirAll(fullDst, 0750) // nolint: gosec,mnd
+			return err
+		}
+
+		l.WithFields(logrus.Fields{"path": path, "name": d.Name()}).Debug("extracting file")
+		l.Debug("opening file in archive")
+		f, err := fsys.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		l.Debug("reading file in archive")
+		data, err := io.ReadAll(f)
+		if err != nil {
+			return err
+		}
+
+		l.WithFields(logrus.Fields{"path": path, "name": d.Name(), "destination": fullDst}).Debug("writing file to destination")
+		err = os.WriteFile(fullDst, data, 0750) // nolint: gosec,mnd
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	l.Debug("decompression complete")
 
 	return nil
 }
