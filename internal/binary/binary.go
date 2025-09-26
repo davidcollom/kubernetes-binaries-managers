@@ -2,17 +2,18 @@ package binary
 
 import (
 	"fmt"
-	"io/ioutil"
-	"math/rand"
+	"io"
+	"math/big"
+
+	// "math/rand/v2"
+	"crypto/rand"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
-	"time"
 
 	"path/filepath"
 
-	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers"
+	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers" // nolint:staticcheck
 	"github.com/mholt/archiver/v3"
 )
 
@@ -22,13 +23,13 @@ const (
 	exe   = ".exe"
 )
 
-type DownloadBinaryError struct {
+type DownloadError struct {
 	Err  string
 	URL  string
 	Body string
 }
 
-func (e *DownloadBinaryError) Error() string {
+func (e *DownloadError) Error() string {
 	var error string
 	if e.Body == "" {
 		error = fmt.Sprintf("%s\nurl: %s", e.Err, e.URL)
@@ -39,12 +40,15 @@ func (e *DownloadBinaryError) Error() string {
 	return error
 }
 
-func DownloadBinary(version string, url string) ([]byte, error) { // nolint: funlen
-	var osArch string
-	var err error
-	var body []byte
-	var errorCodeFail = 404
-	var errorCodePass = 200
+func Download(version string, url string) ([]byte, error) { // nolint: funlen
+	var (
+		osArch string
+		err    error
+		body   []byte
+
+		errorCodeFail = 404
+		errorCodePass = 200
+	)
 
 	// Don't control the error since at this point it should be controlled
 	osArch, _ = GetOSArch()
@@ -53,9 +57,10 @@ func DownloadBinary(version string, url string) ([]byte, error) { // nolint: fun
 
 	if strings.Contains(url, "openshift") {
 		// They use mac instead of darwin in the url
-		if os == "darwin" {
+		switch os {
+		case "darwin":
 			os = "mac"
-		} else if os == "windows" {
+		case "windows":
 			url = strings.Replace(url, ".tar.gz", ".zip", 1)
 		}
 
@@ -77,44 +82,43 @@ func DownloadBinary(version string, url string) ([]byte, error) { // nolint: fun
 	}
 
 	fmt.Println("Downloading binary...")
-	resp, err := http.Get(url) // nolint
 
+	resp, err := http.Get(url) // nolint
 	if err != nil {
 		return body, err
 	}
 
 	defer resp.Body.Close()
-	body, err = ioutil.ReadAll(resp.Body)
 
+	body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return body, err
 	}
 
 	if resp.StatusCode == errorCodeFail {
-		return body, &DownloadBinaryError{"binary not found", url, string(body)}
+		return body, &DownloadError{"binary not found", url, string(body)}
 	} else if resp.StatusCode != errorCodePass {
-		return body, &DownloadBinaryError{"unhandled error", url, string(body)}
-	}
-
-	if err != nil {
-		return body, err
+		return body, &DownloadError{"unhandled error", url, string(body)}
 	}
 
 	return body, nil
 }
 
-func SaveBinary(fileName string, body []byte) error { // nolint: funlen
+func Save(fileName string, body []byte) error { // nolint: funlen
 	var err error
 
 	// helm returns a compressed file, so save it somewhere and decompress it
 	if strings.Contains(fileName, "helm") {
 		var fileExt string
 
-		rand.Seed(time.Now().UnixNano())
+		randomNumbers := int64(5000) // nolint:mnd
 
-		randomNumbers := 5000
-		tempDir, err := ioutil.TempDir("", "helm")
+		randomInt, err := rand.Int(rand.Reader, big.NewInt(randomNumbers))
+		if err != nil {
+			return err
+		}
 
+		tempDir, err := os.MkdirTemp("", "helm")
 		if err != nil {
 			return err
 		}
@@ -122,7 +126,7 @@ func SaveBinary(fileName string, body []byte) error { // nolint: funlen
 		defer os.RemoveAll(tempDir)
 
 		osArch, _ := GetOSArch()
-		file := fmt.Sprintf("%s/helm-%s", tempDir, strconv.Itoa(rand.Intn(randomNumbers)))
+		file := fmt.Sprintf("%s/helm-%d", tempDir, randomInt.Int64())
 		file, _ = filepath.Abs(file)
 
 		if strings.Contains(osArch, "windows") {
@@ -131,14 +135,12 @@ func SaveBinary(fileName string, body []byte) error { // nolint: funlen
 			fileExt = targz
 		}
 
-		err = ioutil.WriteFile(file+fileExt, body, 0750)
-
+		err = os.WriteFile(file+fileExt, body, 0750) // nolint: gosec,mnd
 		if err != nil {
 			return err
 		}
 
 		err = archiver.Unarchive(file+fileExt, file)
-
 		if err != nil {
 			return err
 		}
@@ -151,8 +153,7 @@ func SaveBinary(fileName string, body []byte) error { // nolint: funlen
 			path += exe
 		}
 
-		body, err = ioutil.ReadFile(path)
-
+		body, err = os.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -160,11 +161,14 @@ func SaveBinary(fileName string, body []byte) error { // nolint: funlen
 		// oc returns a compressed file, so save it somewhere and decompress it
 		var fileExt string
 
-		rand.Seed(time.Now().UnixNano())
+		randomNumbers := int64(5000) // nolint:mnd
 
-		randomNumbers := 5000
-		tempDir, err := ioutil.TempDir("", "oc")
+		randomInt, err := rand.Int(rand.Reader, big.NewInt(randomNumbers))
+		if err != nil {
+			return err
+		}
 
+		tempDir, err := os.MkdirTemp("", "oc")
 		if err != nil {
 			return err
 		}
@@ -172,7 +176,7 @@ func SaveBinary(fileName string, body []byte) error { // nolint: funlen
 		defer os.RemoveAll(tempDir)
 
 		osArch, _ := GetOSArch()
-		file := fmt.Sprintf("%s/oc-%s", tempDir, strconv.Itoa(rand.Intn(randomNumbers)))
+		file := fmt.Sprintf("%s/oc-%d", tempDir, randomInt.Int64())
 		file, _ = filepath.Abs(file)
 
 		if strings.Contains(osArch, "windows") {
@@ -181,14 +185,12 @@ func SaveBinary(fileName string, body []byte) error { // nolint: funlen
 			fileExt = targz
 		}
 
-		err = ioutil.WriteFile(file+fileExt, body, 0750)
-
+		err = os.WriteFile(file+fileExt, body, 0750) // nolint: gosec,mnd
 		if err != nil {
 			return err
 		}
 
 		err = archiver.Unarchive(file+fileExt, file)
-
 		if err != nil {
 			return err
 		}
@@ -199,15 +201,13 @@ func SaveBinary(fileName string, body []byte) error { // nolint: funlen
 			path += exe
 		}
 
-		body, err = ioutil.ReadFile(path)
-
+		body, err = os.ReadFile(path)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = ioutil.WriteFile(fileName, body, 0750)
-
+	err = os.WriteFile(fileName, body, 0750) // nolint: gosec,mnd
 	if err != nil {
 		return err
 	}

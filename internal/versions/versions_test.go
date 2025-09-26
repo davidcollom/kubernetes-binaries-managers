@@ -113,23 +113,30 @@ func TestSortVersions(t *testing.T) { // nolint: funlen
 		tt := tt
 		t.Run(tt.testName, func(t *testing.T) {
 			var err error
+
 			expectedVersionsStr := tt.output
 			receivedVersionsStr := tt.input
+
 			receivedVersionsVrs := make([]*version.Version, len(tt.input))
 			for i, raw := range receivedVersionsStr {
 				v, err := version.NewVersion(raw)
 				if err != nil {
 					t.Logf("NewVersion error: %s", err)
 				}
+
 				receivedVersionsVrs[i] = v
 			}
+
 			t.Logf("receivedVersionsStr: %s", receivedVersionsStr)
+
 			actualVersionsVrs, err := SortVersions(receivedVersionsVrs, tt.allReleases, tt.allVersions)
+
 			actualVersionsStr := make([]string, len(actualVersionsVrs))
 			for i, raw := range actualVersionsVrs {
 				v := fmt.Sprintf("%v", raw)
 				actualVersionsStr[i] = v
 			}
+
 			t.Logf("actualVersionsVrs: %s", actualVersionsVrs)
 			assert.Nil(t, err)
 			assert.Equal(t, expectedVersionsStr, actualVersionsStr)
@@ -154,8 +161,10 @@ func TestGetLastPage(t *testing.T) {
 		tt := tt
 		t.Run(tt.testName, func(t *testing.T) {
 			var err error
+
 			actualLastPage, err := GetLastPage(tt.input)
 			expectedLastPage := tt.expected
+
 			assert.Nil(t, err)
 			assert.Equal(t, expectedLastPage, actualLastPage)
 		})
@@ -203,6 +212,7 @@ func TestGetRemoteVersions(t *testing.T) { // nolint: funlen
 				t.Logf("fakeResponse file: %s", fakeResponse)
 				jsonFile, err := os.Open(fakeResponse)
 				require.NoError(t, err)
+
 				defer jsonFile.Close()
 
 				jsonBytes, err := io.ReadAll(jsonFile)
@@ -224,11 +234,13 @@ func TestGetRemoteVersions(t *testing.T) { // nolint: funlen
 			require.NoError(t, err)
 
 			expectedVersions := tt.expected
+
 			receivedVersions := make([]string, len(remoteVersions))
 			for i, raw := range remoteVersions {
 				v := fmt.Sprintf("%v", raw)
 				receivedVersions[i] = v
 			}
+
 			assert.Len(t, receivedVersions, 40)
 			assert.Equal(t, expectedVersions, receivedVersions)
 		})
@@ -266,16 +278,20 @@ func TestGetLocalVersions(t *testing.T) { // nolint: funlen
 		tt := tt
 		t.Run(tt.testName, func(t *testing.T) {
 			var err error
+
 			expectedVersions := tt.expected
 			receivedVersions := tt.input
 			binaryName := "binaryTest"
 			home, err := homedir.Dir()
 			t.Logf("home: %s", home)
+
 			if err != nil {
 				t.Logf("home error: %s", err)
 			}
+
 			binDir := fmt.Sprintf("%s/.bin", home)
 			t.Logf("binDir: %s", binDir)
+
 			if _, err := os.Stat(binDir); os.IsNotExist(err) {
 				err = os.Mkdir(binDir, 0755)
 				if err != nil {
@@ -283,24 +299,30 @@ func TestGetLocalVersions(t *testing.T) { // nolint: funlen
 				}
 				defer os.Remove(binDir)
 			}
+
 			for _, value := range receivedVersions {
 				binary := fmt.Sprintf("%s/%s-v%s", binDir, binaryName, value)
-				err = os.WriteFile(binary, []byte(""), 0644)
+
+				err = os.WriteFile(binary, []byte(""), 0644) // nolint: gosec
 				if err != nil {
 					t.Logf("WriteFile error: %s", err)
 				}
 				defer os.Remove(binary)
 			}
+
 			actualVersionsVrs, err := GetLocalVersions(binaryName)
 			if err != nil {
 				t.Logf("actualVersionsVrs error: %s", err)
 			}
+
 			t.Logf("GetLocalVersions: %s", actualVersionsVrs)
+
 			actualVersionsStr := make([]string, len(actualVersionsVrs))
 			for i, raw := range actualVersionsVrs {
 				v := fmt.Sprintf("%v", raw)
 				actualVersionsStr[i] = v
 			}
+
 			assert.Nil(t, err)
 			assert.Equal(t, expectedVersions, actualVersionsStr)
 		})

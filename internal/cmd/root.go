@@ -25,13 +25,16 @@ func Execute() {
 
 func init() {
 	// Global flags
-	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "log level: debug, info, warn, error")
-	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "enable debug logging (shorthand for --log-level=debug)")
+	RootCmd.PersistentFlags().StringVar(&logLevel,
+		"log-level", "info", "log level: debug, info, warn, error")
+	RootCmd.PersistentFlags().BoolVarP(&verbose,
+		"verbose", "v", false, "enable debug logging (shorthand for --log-level=debug)")
 
 	cobra.OnInitialize(func() {
 		if verbose {
 			logLevel = "debug"
 		}
+
 		logging.Setup(logLevel)
 		logging.Debug("logger initialized", "level", logLevel)
 	})

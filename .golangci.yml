@@ -1,49 +1,56 @@
----
+version: "2"
 linters:
-  fast: false
-  disable-all: true
+  default: none
   enable:
-    - goimports
-    - govet
-    - errcheck
-    - staticcheck
-    - unused
-    - gosimple
-    - structcheck
-    - varcheck
-    - ineffassign
-    - deadcode
-    - typecheck
+    - gocyclo
     - bodyclose
-    - golint
-    - rowserrcheck
-    - gosec
-    - interfacer
-    - unconvert
-    - dupl
-    - goconst
-    - maligned
-    - depguard
-    - misspell
-    - lll
-    - unparam
+    # - depguard
     - dogsled
+    - dupl
+    - errcheck
+    # - funlen
+    - goconst
+    - gocritic
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - mnd
     - nakedret
     - prealloc
-    - scopelint
-    - gocritic
-    - funlen
+    - rowserrcheck
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
     - whitespace
-    - wsl
-    - goprintffuncname
-    - gomnd
-    # - gochecknoinits
-    # - gochecknoglobals
-issues:
-  exclude-rules:
-    - linters:
-        - wsl
-      text: declarations should never be cuddled
-    - linters:
-        - golint
-      text: should not use dot imports
+    - wsl_v5
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - wsl
+        text: declarations should never be cuddled
+      - linters:
+          - golint
+        text: should not use dot imports
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

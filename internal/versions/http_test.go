@@ -36,7 +36,11 @@ func TestBackoffHandler(t *testing.T) {
 			max:        10 * time.Second,
 			attemptNum: 1,
 			statusCode: http.StatusOK,
-			wantSleep:  retryablehttp.DefaultBackoff(1*time.Second, 10*time.Second, 1, &http.Response{StatusCode: http.StatusOK}),
+			wantSleep: retryablehttp.DefaultBackoff(
+				1*time.Second,
+				10*time.Second,
+				1,
+				&http.Response{StatusCode: http.StatusOK}),
 		},
 		{
 			name:           "Rate limit exceeded, valid reset header in future",
@@ -58,7 +62,10 @@ func TestBackoffHandler(t *testing.T) {
 			rateLimitReset: strconv.FormatInt(time.Now().UTC().Unix()-10, 10),
 			wantSleep: retryablehttp.DefaultBackoff(1*time.Second, 10*time.Second, 1, &http.Response{
 				StatusCode: http.StatusTooManyRequests,
-				Header:     http.Header{"X-Ratelimit-Remaining": []string{"0"}, "X-Ratelimit-Reset": []string{strconv.FormatInt(time.Now().UTC().Unix()-10, 10)}},
+				Header: http.Header{
+					"X-Ratelimit-Remaining": []string{"0"},
+					"X-Ratelimit-Reset":     []string{strconv.FormatInt(time.Now().UTC().Unix()-10, 10)},
+				},
 			}),
 		},
 		{
@@ -71,7 +78,9 @@ func TestBackoffHandler(t *testing.T) {
 			rateLimitReset: "invalid",
 			wantSleep: retryablehttp.DefaultBackoff(1*time.Second, 10*time.Second, 1, &http.Response{
 				StatusCode: http.StatusTooManyRequests,
-				Header:     http.Header{"X-Ratelimit-Remaining": []string{"0"}, "X-Ratelimit-Reset": []string{"invalid"}},
+				Header: http.Header{
+					"X-Ratelimit-Remaining": []string{"0"},
+					"X-Ratelimit-Reset":     []string{"invalid"}},
 			}),
 		},
 		{
@@ -84,7 +93,9 @@ func TestBackoffHandler(t *testing.T) {
 			rateLimitReset: strconv.FormatInt(time.Now().UTC().Unix()+10, 10),
 			wantSleep: retryablehttp.DefaultBackoff(1*time.Second, 10*time.Second, 1, &http.Response{
 				StatusCode: http.StatusTooManyRequests,
-				Header:     http.Header{"X-Ratelimit-Remaining": []string{"5"}, "X-Ratelimit-Reset": []string{strconv.FormatInt(time.Now().UTC().Unix()+10, 10)}},
+				Header: http.Header{
+					"X-Ratelimit-Remaining": []string{"5"},
+					"X-Ratelimit-Reset":     []string{strconv.FormatInt(time.Now().UTC().Unix()+10, 10)}},
 			}),
 		},
 	}
@@ -97,14 +108,17 @@ func TestBackoffHandler(t *testing.T) {
 				if tt.rateLimitRem != "" {
 					header.Set("X-Ratelimit-Remaining", tt.rateLimitRem)
 				}
+
 				if tt.rateLimitReset != "" {
 					header.Set("X-Ratelimit-Reset", tt.rateLimitReset)
 				}
+
 				resp = &http.Response{
 					StatusCode: tt.statusCode,
 					Header:     header,
 				}
 			}
+
 			got := backoffHandler(tt.min, tt.max, tt.attemptNum, resp)
 			// Allow a small delta for timing differences
 			if tt.wantSleep > 0 && tt.wantSleep < 10*time.Second {
@@ -195,12 +209,14 @@ func TestRetryPolicy_Table(t *testing.T) {
 			if tt.rateLimitRem != "" {
 				header.Set("X-Ratelimit-Remaining", tt.rateLimitRem)
 			}
+
 			resp := &http.Response{
 				StatusCode: tt.statusCode,
 				Header:     header,
 			}
 			shouldRetry, err := retryPolicy(context.Background(), resp, nil)
 			assert.Equal(t, tt.expectRetry, shouldRetry)
+
 			if tt.expectErr {
 				assert.Error(t, err)
 			} else {

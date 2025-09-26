@@ -4,17 +4,19 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashicorp/go-version"
-	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers"
-	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/versions"
+	version "github.com/hashicorp/go-version"
+	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers"
+	vers "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/versions"
 	"github.com/spf13/cobra"
 )
 
 func local(cmd *cobra.Command, args []string) {
-	var err error
-	var allReleases bool
-	var allVersions bool
-	var versions []*version.Version
+	var (
+		err         error
+		allReleases bool
+		allVersions bool
+		versions    []*version.Version
+	)
 
 	if len(args) != 0 {
 		fmt.Println("Too many arguments.")
@@ -26,21 +28,21 @@ func local(cmd *cobra.Command, args []string) {
 
 	allReleases, err = cmd.Flags().GetBool("all-releases")
 
-	CheckGenericError(err)
+	helpers.CheckGenericError(err)
 
 	allVersions, err = cmd.Flags().GetBool("all-versions")
 
-	CheckGenericError(err)
+	helpers.CheckGenericError(err)
 
-	versions, err = GetLocalVersions(BinaryToInstall)
+	versions, err = vers.GetLocalVersions(BinaryToInstall)
 
-	CheckGenericError(err)
+	helpers.CheckGenericError(err)
 
-	versions, err = SortVersions(versions, allReleases, allVersions)
+	versions, err = vers.SortVersions(versions, allReleases, allVersions)
 
-	CheckGenericError(err)
+	helpers.CheckGenericError(err)
 
-	PrintVersions(versions)
+	vers.PrintVersions(versions)
 }
 
 // localCmd represents the local command

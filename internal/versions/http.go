@@ -22,6 +22,7 @@ func backoffHandler(min, max time.Duration, attemptNum int, resp *http.Response)
 				if err == nil {
 					// Calculate how long to wait until the reset time.
 					now := time.Now().UTC().Unix()
+
 					sleepDuration := time.Duration(resetTimestamp-now) * time.Second
 					if sleepDuration > 0 {
 						log.Printf("Rate limit exceeded. Sleeping for %v until reset.", sleepDuration)
@@ -61,7 +62,6 @@ type AuthRoundTripper struct {
 }
 
 func (art *AuthRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-
 	// If we have a token and one is not already set, lets set it!
 	if art.token != "" && req.Header.Get("Authorization") == "" {
 		logging.Debug("adding Authorization header to request")

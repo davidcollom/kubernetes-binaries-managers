@@ -23,6 +23,7 @@ func newLogger() *logrus.Logger {
 		ForceColors:      term.IsTerminal(int(os.Stderr.Fd())),
 		PadLevelText:     true,
 	})
+
 	return l
 }
 
@@ -32,6 +33,7 @@ func Setup(level string) {
 	L = newLogger()
 	lvl := parseLevel(level)
 	L.SetLevel(lvl)
+
 	if tf, ok := L.Formatter.(*logrus.TextFormatter); ok {
 		tf.ForceColors = term.IsTerminal(int(os.Stderr.Fd()))
 		tf.DisableTimestamp = true
@@ -56,14 +58,18 @@ func toFields(args ...any) logrus.Fields {
 	if len(args) == 0 {
 		return nil
 	}
+
 	fields := logrus.Fields{}
+
 	for i := 0; i+1 < len(args); i += 2 {
 		key := fmt.Sprint(args[i])
 		fields[key] = args[i+1]
 	}
+
 	if len(args)%2 == 1 {
 		fields["arg"] = args[len(args)-1]
 	}
+
 	return fields
 }
 

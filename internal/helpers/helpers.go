@@ -3,7 +3,7 @@ package helpers
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"runtime"
@@ -21,11 +21,13 @@ func CheckGenericError(err error) {
 }
 
 func CheckHTTPError(resp *http.Response) {
-	var result map[string]interface{}
-	var message string
+	var (
+		result  map[string]interface{}
+		message string
+	)
 
 	if resp.StatusCode != http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 
 		if resp.Header.Get("Content-Type") == "application/json" {
 			CheckGenericError(err)
@@ -53,20 +55,24 @@ func FileExists(filename string) bool {
 }
 
 func GetLastPage(link string) (int, error) {
-	var lastPageInt int
-	var err error
-	var minLastPage int = 2
+	var (
+		minLastPage = 2
+		maxReplace  = 2
+		lastPageInt int
+		err         error
+	)
 
 	// When there's no link, it means there's least than 100 releases
+
 	if link == "" {
 		return minLastPage, nil
 	}
 
 	link = strings.Split(link, " ")[2]
 	lastPageIndex := strings.LastIndex(link, "page=")
-	lastPageStr := strings.Replace(link[lastPageIndex+5:], ">;", "", 2)
-	lastPageInt, err = strconv.Atoi(lastPageStr)
+	lastPageStr := strings.Replace(link[lastPageIndex+5:], ">;", "", maxReplace)
 
+	lastPageInt, err = strconv.Atoi(lastPageStr)
 	if err != nil {
 		return 0, err
 	}
@@ -106,10 +112,12 @@ func contains(arr []string, str string) bool {
 }
 
 func GetOSArch() (string, error) {
-	var supportedOS = []string{"linux", "windows", "darwin"}
-	var supportedArch = []string{"arm", "arm64", "amd64"}
-	var os = runtime.GOOS
-	var arch = runtime.GOARCH
+	var (
+		supportedOS   = []string{"linux", "windows", "darwin"}
+		supportedArch = []string{"arm", "arm64", "amd64"}
+		os            = runtime.GOOS
+		arch          = runtime.GOARCH
+	)
 
 	if !contains(supportedOS, os) {
 		return "", &OSArchError{"os not supported", os, ""}

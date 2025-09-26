@@ -2,7 +2,6 @@ package wrapper
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,19 +14,22 @@ import (
 
 func Wrapper(binName string) { // nolint: funlen
 	home, _ := homedir.Dir()
-	var binPath string = fmt.Sprintf("%s/.bin", home)
-	var defaultVersion string = fmt.Sprintf("%s/.%s-version", binPath, binName)
-	var localVersion string = fmt.Sprintf(".%s_version", binName)
-	var rawVersion []byte
-	var finalVersion string
-	var fileExt string
-	var err error
+
+	var (
+		binPath        = fmt.Sprintf("%s/.bin", home)
+		defaultVersion = fmt.Sprintf("%s/.%s-version", binPath, binName)
+		localVersion   = fmt.Sprintf(".%s_version", binName)
+		rawVersion     []byte
+		finalVersion   string
+		fileExt        string
+		err            error
+	)
 
 	defaultVersion, _ = filepath.Abs(defaultVersion)
 	localVersion, _ = filepath.Abs(localVersion)
 
 	if _, err := os.Stat(localVersion); err == nil {
-		rawVersion, err = ioutil.ReadFile(localVersion)
+		rawVersion, err = os.ReadFile(localVersion)
 		if err != nil {
 			fmt.Println("File reading error", err)
 			return
@@ -36,15 +38,13 @@ func Wrapper(binName string) { // nolint: funlen
 		if _, err := os.Stat(defaultVersion); err != nil {
 			d := []byte("auto\n")
 
-			err = ioutil.WriteFile(defaultVersion, d, 0750)
-
+			err = os.WriteFile(defaultVersion, d, 0750) // nolint: gosec,mnd
 			if err != nil {
 				return
 			}
 		}
 
-		rawVersion, err = ioutil.ReadFile(defaultVersion)
-
+		rawVersion, err = os.ReadFile(defaultVersion)
 		if err != nil {
 			fmt.Println("File reading error", err)
 			return
@@ -59,7 +59,6 @@ func Wrapper(binName string) { // nolint: funlen
 
 	if finalVersion == "auto" && binName == "kubectl" {
 		version, err := helpers.KubeGetVersion()
-
 		if err != nil {
 			fmt.Println("Error getting kubernetes version: ", err)
 			return
@@ -89,8 +88,8 @@ func Wrapper(binName string) { // nolint: funlen
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
-	err = cmd.Run()
 
+	err = cmd.Run()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)

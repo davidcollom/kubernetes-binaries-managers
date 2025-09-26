@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	var binName string = "oc"
+	var binName = "oc"
 
 	wrapper.Wrapper(binName)
 }

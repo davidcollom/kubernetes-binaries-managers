@@ -3,7 +3,7 @@ package helpers
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,12 +20,14 @@ import (
 )
 
 func KubeGetVersion() (string, error) {
-	var kubeconfig string
-	var cli *string
-	var err error
-	var home string
-	var version string
-	var config *rest.Config
+	var (
+		kubeconfig string
+		cli        *string
+		err        error
+		home       string
+		version    string
+		config     *rest.Config
+	)
 
 	cli = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	flag.Parse()
@@ -63,13 +65,12 @@ func KubeGetVersion() (string, error) {
 	config.Timeout = 1 * time.Second
 
 	client, err := kubernetes.NewForConfig(config)
-
 	if err != nil {
 		version = getDefaultVersion()
 		return version, nil
 	}
 
-	v, err := client.DiscoveryClient.ServerVersion()
+	v, err := client.ServerVersion()
 	if err != nil {
 		version = getDefaultVersion()
 		return version, nil
@@ -81,8 +82,10 @@ func KubeGetVersion() (string, error) {
 }
 
 func getDefaultVersion() string {
-	var fileExt string
-	var version string
+	var (
+		fileExt string
+		version string
+	)
 
 	if runtime.GOOS == "windows" {
 		fileExt = ".exe"
@@ -102,7 +105,7 @@ func getDefaultVersion() string {
 
 		defer resp.Body.Close()
 
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		CheckGenericError(err)
 
 		bodyText := string(body)
