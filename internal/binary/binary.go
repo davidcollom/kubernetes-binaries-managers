@@ -175,6 +175,7 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 		}
 		// Write the Archive to disk
 		logging.Debug("writing archive to disk", "path", file+fileExt)
+
 		err = os.WriteFile(file+fileExt, body, 0750) // nolint: gosec,mnd
 		if err != nil {
 			return err
@@ -207,8 +208,7 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 
 func decompress(file, destination string) error {
 	l := logging.L.WithField("method", "decompress")
-	// TODO: Fix this to actually use the destination
-	_ = destination
+
 	fsys, err := archives.FileSystem(context.Background(), file, nil)
 	if err != nil {
 		return err
@@ -216,29 +216,41 @@ func decompress(file, destination string) error {
 
 	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		fullDst := filepath.Join(destination, path)
+
 		if err != nil {
 			return err
 		}
+
 		// Skip root
 		if path == "." {
 			l.WithFields(logrus.Fields{"path": path, "name": d.Name()}).Debug("Skipping root")
 			return nil
 		}
+
 		// Skip .git directories
 		if d.IsDir() && path == ".git" {
-			l.WithFields(logrus.Fields{"path": path, "name": d.Name()}).Debug("Skipping .git directory")
+			l.WithFields(
+				logrus.Fields{"path": path, "name": d.Name()},
+			).Debug("Skipping .git directory")
+
 			return fs.SkipDir
 		}
 
 		// No Need to extract directories, just files
 		if d.IsDir() {
-			l.WithFields(logrus.Fields{"path": path, "name": d.Name()}).Debug("Looking in directory")
+			l.WithFields(logrus.
+				Fields{"path": path, "name": d.Name()},
+			).Debug("Looking in directory")
+
 			err = os.MkdirAll(fullDst, 0750) // nolint: gosec,mnd
+
 			return err
 		}
 
-		l.WithFields(logrus.Fields{"path": path, "name": d.Name()}).Debug("extracting file")
-		l.Debug("opening file in archive")
+		l.WithFields(
+			logrus.Fields{"path": path, "name": d.Name()},
+		).Debug("opening file in archive")
+
 		f, err := fsys.Open(path)
 		if err != nil {
 			return err
@@ -246,12 +258,16 @@ func decompress(file, destination string) error {
 		defer f.Close()
 
 		l.Debug("reading file in archive")
+
 		data, err := io.ReadAll(f)
 		if err != nil {
 			return err
 		}
 
-		l.WithFields(logrus.Fields{"path": path, "name": d.Name(), "destination": fullDst}).Debug("writing file to destination")
+		l.WithFields(logrus.Fields{
+			"path": path, "name": d.Name(), "destination": fullDst,
+		}).Debug("writing file to destination")
+
 		err = os.WriteFile(fullDst, data, 0750) // nolint: gosec,mnd
 		if err != nil {
 			return err
@@ -262,6 +278,7 @@ func decompress(file, destination string) error {
 	if err != nil {
 		return err
 	}
+
 	l.Debug("decompression complete")
 
 	return nil
