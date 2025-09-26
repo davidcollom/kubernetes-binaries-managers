@@ -1,6 +1,7 @@
 package versions
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,10 +11,23 @@ import (
 
 	"github.com/hashicorp/go-version"
 	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers"
+	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/logging"
 	"github.com/mitchellh/go-homedir"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+
+	if testing.Verbose() {
+		logging.Setup("debug")
+	} else {
+		logging.Setup("error")
+	}
+
+	os.Exit(m.Run())
+}
 
 func TestSortVersions(t *testing.T) { // nolint: funlen
 	var flagtests = []struct {
@@ -241,7 +255,7 @@ func TestGetRemoteVersions(t *testing.T) { // nolint: funlen
 				receivedVersions[i] = v
 			}
 
-			assert.Len(t, receivedVersions, 40)
+			assert.Len(t, receivedVersions, len(tt.expected))
 			assert.Equal(t, expectedVersions, receivedVersions)
 		})
 	}

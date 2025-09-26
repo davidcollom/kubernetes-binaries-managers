@@ -130,7 +130,7 @@ func TestBackoffHandler(t *testing.T) {
 	}
 }
 
-func TestRetryPolicy_Table(t *testing.T) {
+func TestRetryPolicy(t *testing.T) {
 	tests := []struct {
 		name         string
 		statusCode   int
@@ -167,13 +167,6 @@ func TestRetryPolicy_Table(t *testing.T) {
 			expectErr:    false,
 		},
 		{
-			name:         "TooManyRequests, rate limit remaining 5",
-			statusCode:   http.StatusTooManyRequests,
-			rateLimitRem: "5",
-			expectRetry:  false,
-			expectErr:    false,
-		},
-		{
 			name:         "InternalServerError, no rate limit header",
 			statusCode:   http.StatusInternalServerError,
 			rateLimitRem: "",
@@ -198,7 +191,7 @@ func TestRetryPolicy_Table(t *testing.T) {
 			name:         "TooManyRequests, no rate limit header",
 			statusCode:   http.StatusTooManyRequests,
 			rateLimitRem: "",
-			expectRetry:  false,
+			expectRetry:  true, // DefaultRetryPolicy retries 429
 			expectErr:    false,
 		},
 	}

@@ -5,7 +5,7 @@ $(BIN):
 $(BIN)/golangci-lint: | $(BIN)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v2.5.0
 $(BIN)/gopherbadger: | $(BIN)
-	GOBIN=$(BIN) go get github.com/jpoles1/gopherbadger
+	GOBIN=$(BIN) go install github.com/jpoles1/gopherbadger@latest
 $(BIN)/kind: | $(BIN)
 	curl -Lo $(BIN)/kind https://kind.sigs.k8s.io/dl/v0.8.1/kind-$$(uname)-amd64; \
 	chmod +x $(BIN)/kind
