@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"math/big"
 
-	// "math/rand/v2"
-	"crypto/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -115,14 +112,7 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 	if strings.Contains(fileName, "helm") {
 		var fileExt string
 
-		randomNumbers := int64(5000) // nolint:mnd
-
-		randomInt, err := rand.Int(rand.Reader, big.NewInt(randomNumbers))
-		if err != nil {
-			return err
-		}
-
-		tempDir, err := os.MkdirTemp("", "helm")
+		tempDir, err := os.MkdirTemp("", "helm-*")
 		if err != nil {
 			return err
 		}
@@ -130,7 +120,7 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 		defer os.RemoveAll(tempDir)
 
 		osArch, _ := GetOSArch()
-		file := fmt.Sprintf("%s/helm-%d", tempDir, randomInt.Int64())
+		file := fmt.Sprintf("%s/helm", tempDir)
 		file, _ = filepath.Abs(file)
 
 		if strings.Contains(osArch, "windows") {
