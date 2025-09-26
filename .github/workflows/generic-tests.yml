@@ -1,7 +1,11 @@
 ---
 name: Static tests
 
-on: [pull_request_target]
+on:
+  pull_request_target:
+  push:
+    branches:
+      - main
 
 jobs:
   unit-test:
