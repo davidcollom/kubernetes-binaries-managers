@@ -7,26 +7,52 @@ import (
 	"runtime"
 
 	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers"
+	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers/fzf"
+	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/versions"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
 
 func uninstall(cmd *cobra.Command, args []string) {
-	// TODO añadir soporte para fzf
 	var err error
-	var expectedArgLength int = 1
+	var version string
 
-	// TODO cambiar por ExactArgs
+	// Support interactive selection via embedded fuzzy finder when no args provided
 	if len(args) == 0 {
-		fmt.Println("You must specify a version!")
-		os.Exit(0)
-	} else if len(args) != expectedArgLength {
+		versions, err := GetLocalVersions(BinaryToInstall)
+		CheckGenericError(err)
+
+		if len(versions) == 0 {
+			fmt.Println("No installed versions found.")
+			os.Exit(0)
+		}
+
+		versions, err = SortVersions(versions, false, false)
+		CheckGenericError(err)
+
+		// Build string slice for selection
+		items := make([]string, 0, len(versions))
+		for _, v := range versions {
+			items = append(items, v.String())
+		}
+
+		sel, err := fzf.Select(items, "Uninstall version> ")
+		if err == fzf.ErrNonInteractive {
+			// Items already printed for piping use-cases
+			os.Exit(0)
+		}
+		if err != nil || sel == "" {
+			fmt.Println("No version selected.")
+			os.Exit(0)
+		}
+		version = sel
+	} else if len(args) == 1 {
+		version = args[0]
+	} else {
 		fmt.Println("Too many arguments.")
 		_ = cmd.Help()
 		os.Exit(0)
 	}
-
-	var version = args[0]
 
 	// Set base bin directory
 	home, _ := homedir.Dir()

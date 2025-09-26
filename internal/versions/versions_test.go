@@ -2,7 +2,7 @@ package versions
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,6 +12,7 @@ import (
 	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers"
 	"github.com/mitchellh/go-homedir"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSortVersions(t *testing.T) { // nolint: funlen
@@ -118,18 +119,18 @@ func TestSortVersions(t *testing.T) { // nolint: funlen
 			for i, raw := range receivedVersionsStr {
 				v, err := version.NewVersion(raw)
 				if err != nil {
-					t.Log(fmt.Sprintf("NewVersion error: %s", err))
+					t.Logf("NewVersion error: %s", err)
 				}
 				receivedVersionsVrs[i] = v
 			}
-			t.Log(fmt.Sprintf("receivedVersionsStr: %s", receivedVersionsStr))
+			t.Logf("receivedVersionsStr: %s", receivedVersionsStr)
 			actualVersionsVrs, err := SortVersions(receivedVersionsVrs, tt.allReleases, tt.allVersions)
 			actualVersionsStr := make([]string, len(actualVersionsVrs))
 			for i, raw := range actualVersionsVrs {
 				v := fmt.Sprintf("%v", raw)
 				actualVersionsStr[i] = v
 			}
-			t.Log(fmt.Sprintf("actualVersionsVrs: %s", actualVersionsVrs))
+			t.Logf("actualVersionsVrs: %s", actualVersionsVrs)
 			assert.Nil(t, err)
 			assert.Equal(t, expectedVersionsStr, actualVersionsStr)
 			assert.Equal(t, tt.versionsLength, len(actualVersionsStr))
@@ -164,12 +165,12 @@ func TestGetLastPage(t *testing.T) {
 func TestGetRemoteVersions(t *testing.T) { // nolint: funlen
 	var flagtests = []struct {
 		testName string
-		input    string
+		maxPages string
 		expected []string
 	}{
 		{
 			"one page",
-			"2",
+			"1",
 			[]string{
 				"1.17.5", "1.18.2", "1.16.9", "1.18.1", "1.19.0-alpha.1", "1.18.0", "1.18.0-rc.1", "1.15.11", "1.17.4", "1.16.8",
 				"1.18.0-beta.2", "1.18.0-beta.1", "1.18.0-alpha.5", "1.15.10", "1.16.7",
@@ -178,7 +179,7 @@ func TestGetRemoteVersions(t *testing.T) { // nolint: funlen
 		},
 		{
 			"two pages",
-			"3",
+			"2",
 			[]string{
 				"1.17.5", "1.18.2", "1.16.9", "1.18.1", "1.19.0-alpha.1",
 				"1.18.0", "1.18.0-rc.1", "1.15.11", "1.17.4", "1.16.8",
@@ -197,40 +198,38 @@ func TestGetRemoteVersions(t *testing.T) { // nolint: funlen
 		t.Run(tt.testName, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 				page := req.URL.Query()["page"][0]
-				t.Log(fmt.Sprintf("page: %s", page))
-				fakeResponse := fmt.Sprintf("test_data/page_%s", page)
-				t.Log(fmt.Sprintf("fakeResponse file: %s", fakeResponse))
+				t.Logf("page: %s", page)
+				fakeResponse := fmt.Sprintf("test_data/page_%s.json", page)
+				t.Logf("fakeResponse file: %s", fakeResponse)
 				jsonFile, err := os.Open(fakeResponse)
-				if err != nil {
-					t.Log(fmt.Sprintf("open file error: %s", err))
-				}
+				require.NoError(t, err)
 				defer jsonFile.Close()
-				jsonBytes, err := ioutil.ReadAll(jsonFile)
-				if err != nil {
-					t.Log(fmt.Sprintf("read file as bytes error: %s", err))
-				}
+
+				jsonBytes, err := io.ReadAll(jsonFile)
+				require.NoError(t, err)
+
 				link := fmt.Sprintf(
 					"<https://api.github.com/repositories/20580498/releases?per_page=20&page=1>; rel=\"next\", <https://api.github.com/repositories/20580498/releases?per_page=20&page=%s>; rel=\"last\"", // nolint: lll
-					tt.input)
-				t.Log(fmt.Sprintf("link: %s", link))
+					tt.maxPages)
+				t.Logf("link: %s", link)
 				rw.Header().Set("Content-Type", "application/json")
 				rw.Header().Set("Link", link)
 				_, err = rw.Write(jsonBytes)
-				if err != nil {
-					t.Log(fmt.Sprintf("write http response error: %s", err))
-				}
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 
 			remoteVersions, err := GetRemoteVersions(server.URL + "/?page=")
-			t.Log(fmt.Sprintf("remoteVersions: %s", remoteVersions))
-			assert.Nil(t, err)
+			t.Logf("remoteVersions: %s", remoteVersions)
+			require.NoError(t, err)
+
 			expectedVersions := tt.expected
 			receivedVersions := make([]string, len(remoteVersions))
 			for i, raw := range remoteVersions {
 				v := fmt.Sprintf("%v", raw)
 				receivedVersions[i] = v
 			}
+			assert.Len(t, receivedVersions, 40)
 			assert.Equal(t, expectedVersions, receivedVersions)
 		})
 	}
@@ -271,32 +270,32 @@ func TestGetLocalVersions(t *testing.T) { // nolint: funlen
 			receivedVersions := tt.input
 			binaryName := "binaryTest"
 			home, err := homedir.Dir()
-			t.Log(fmt.Sprintf("home: %s", home))
+			t.Logf("home: %s", home)
 			if err != nil {
-				t.Log(fmt.Sprintf("home error: %s", err))
+				t.Logf("home error: %s", err)
 			}
 			binDir := fmt.Sprintf("%s/.bin", home)
-			t.Log(fmt.Sprintf("binDir: %s", binDir))
+			t.Logf("binDir: %s", binDir)
 			if _, err := os.Stat(binDir); os.IsNotExist(err) {
 				err = os.Mkdir(binDir, 0755)
 				if err != nil {
-					t.Log(fmt.Sprintf("mkdir error: %s", err))
+					t.Logf("mkdir error: %s", err)
 				}
 				defer os.Remove(binDir)
 			}
 			for _, value := range receivedVersions {
 				binary := fmt.Sprintf("%s/%s-v%s", binDir, binaryName, value)
-				err = ioutil.WriteFile(binary, []byte(""), 0644)
+				err = os.WriteFile(binary, []byte(""), 0644)
 				if err != nil {
-					t.Log(fmt.Sprintf("WriteFile error: %s", err))
+					t.Logf("WriteFile error: %s", err)
 				}
 				defer os.Remove(binary)
 			}
 			actualVersionsVrs, err := GetLocalVersions(binaryName)
 			if err != nil {
-				t.Log(fmt.Sprintf("actualVersionsVrs error: %s", err))
+				t.Logf("actualVersionsVrs error: %s", err)
 			}
-			t.Log(fmt.Sprintf("GetLocalVersions: %s", actualVersionsVrs))
+			t.Logf("GetLocalVersions: %s", actualVersionsVrs)
 			actualVersionsStr := make([]string, len(actualVersionsVrs))
 			for i, raw := range actualVersionsVrs {
 				v := fmt.Sprintf("%v", raw)

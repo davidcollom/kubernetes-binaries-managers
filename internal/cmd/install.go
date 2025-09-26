@@ -8,27 +8,43 @@ import (
 
 	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/binary"
 	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers"
+	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers/fzf"
+	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/logging"
+	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/versions"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
 
 func install(cmd *cobra.Command, args []string) { // nolint:funlen
-	// TODO añadir soporte para fzf
 	var err error
 	var osArch string
-	var expectedArgLength int = 1
 
-	// TODO cambiar por ExactArgs
+	var version string
+	logging.Debug("install called", "args", args)
 	if len(args) == 0 {
-		fmt.Println("You must specify a version!")
-		os.Exit(0)
-	} else if len(args) != expectedArgLength {
-		fmt.Println("Too many arguments.")
-		_ = cmd.Help()
-		os.Exit(0)
-	}
+		// No version provided; use embedded fuzzy finder to select from remote versions
+		versions, err := GetRemoteVersions(VersionsAPI)
+		CheckGenericError(err)
+		versions, err = SortVersions(versions, false, false)
+		CheckGenericError(err)
 
-	var version = args[0]
+		items := make([]string, 0, len(versions))
+		for _, v := range versions {
+			items = append(items, v.String())
+		}
+		sel, err := fzf.Select(items, "Install version> ")
+		if err == fzf.ErrNonInteractive {
+			// Items already printed for piping use-cases
+			os.Exit(0)
+		}
+		if err != nil || sel == "" {
+			fmt.Println("No version selected.")
+			os.Exit(0)
+		}
+		version = sel
+	} else {
+		version = args[0]
+	}
 	// Check if os/arch is supported
 	osArch, err = GetOSArch()
 
@@ -57,6 +73,7 @@ func install(cmd *cobra.Command, args []string) { // nolint:funlen
 		os.Exit(0)
 	}
 	// Download binary
+	logging.Info("downloading binary", "version", version)
 	body, err := DownloadBinary(version, BinaryDownloadURL)
 	// Check for errors when downloading the binary
 	if err, ok := err.(*DownloadBinaryError); ok {
@@ -78,6 +95,7 @@ func install(cmd *cobra.Command, args []string) { // nolint:funlen
 	err = SaveBinary(fileName, body)
 
 	CheckGenericError(err)
+	logging.Info("binary saved", "path", fileName)
 	fmt.Printf("Done! Saving it at %s.\n", fileName)
 }
 
@@ -85,6 +103,7 @@ func init() {
 	var installCmd = &cobra.Command{
 		Use:   "install",
 		Short: "Install binary",
+		Args:  cobra.MaximumNArgs(1),
 		Run:   install,
 	}
 

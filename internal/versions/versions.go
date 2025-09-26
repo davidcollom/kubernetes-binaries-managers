@@ -3,7 +3,7 @@ package versions
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,8 +14,10 @@ import (
 
 	"runtime"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-version"
 	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers"
+	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/logging"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -66,9 +68,13 @@ func PrintVersions(versions []*version.Version) {
 func GetLocalVersions(binary string) ([]*version.Version, error) {
 	var versions []*version.Version // nolint:prealloc
 
+	logging.Debug("GetLocalVersions called", "binary", binary)
+
 	home, _ := homedir.Dir()
 	binDir, _ := filepath.Abs(fmt.Sprintf("%s/.bin/%s-v*", home, binary))
+	logging.Debug("searching for local versions", "binDir", binDir)
 	matches, _ := filepath.Glob(binDir)
+	logging.Debug("found local versions", "matches", matches)
 
 	for _, match := range matches {
 		v := strings.Split(match, string(os.PathSeparator))
@@ -90,20 +96,50 @@ func GetLocalVersions(binary string) ([]*version.Version, error) {
 	return versions, nil
 }
 
+func processPage(body io.Reader) ([]*version.Version, error) {
+	var pageVersions []*version.Version
+	var rel []Page
+
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(data, &rel); err != nil {
+		return nil, err
+	}
+	for _, element := range rel {
+		v, err := version.NewVersion(element.Release)
+		if err != nil {
+			return nil, err
+		}
+		pageVersions = append(pageVersions, v)
+	}
+	return pageVersions, nil
+}
+
 func GetRemoteVersions(endpoint string) ([]*version.Version, error) {
 	var versions []*version.Version
-	var defaultHTTPTimeout time.Duration = time.Second * 10
-	var client = http.Client{Timeout: defaultHTTPTimeout}
-
-	resp, err := client.Get(endpoint + "1")
-	if err != nil {
-		return versions, err
+	client := retryablehttp.NewClient()
+	client.RetryMax = 3
+	client.HTTPClient.Timeout = 10 * time.Second
+	client.Backoff = backoffHandler
+	client.CheckRetry = retryPolicy
+	client.HTTPClient.Transport = &AuthRoundTripper{
+		token:            os.Getenv("GITHUB_TOKEN"),
+		nextRoundTripper: http.DefaultTransport,
 	}
 
+	client.Logger = nil
+
+	// Fetch the first page
+	logging.Debug("fetching first page", "endpoint", endpoint+"1")
+	resp, err := client.Get(endpoint + "1")
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 
-	forbidden := 403
-	if resp.StatusCode == forbidden {
+	if resp.StatusCode == 403 {
 		fmt.Println("The request to Github's API failed, sorry.")
 		fmt.Println("You may still install the version you want, if you know it. It will always go as X.Y.Z.")
 		fmt.Println("The complete request response is ", resp)
@@ -111,42 +147,36 @@ func GetRemoteVersions(endpoint string) ([]*version.Version, error) {
 	}
 
 	lastPage, err := GetLastPage(resp.Header.Get("Link"))
-
 	if err != nil {
-		return versions, err
+		return nil, err
 	}
+	logging.Debug("last page determined", "lastPage", lastPage)
 
+	// Process first page
+	pageVersions, err := processPage(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	versions = append(versions, pageVersions...)
+	logging.Debug("Processed page\n", "versions", len(pageVersions), "page", 1, "of", lastPage)
+
+	// Process remaining pages
 	for page := 2; page <= lastPage; page++ {
-		body, err := ioutil.ReadAll(resp.Body)
+		logging.Debug("fetching page", "endpoint", endpoint+"1")
+		resp, err := client.Get(endpoint + strconv.Itoa(page))
 		if err != nil {
-			return versions, err
+			return nil, err
 		}
+		defer resp.Body.Close()
 
-		rel := []Page{}
-
-		err = json.Unmarshal(body, &rel)
-
+		pageVersions, err := processPage(resp.Body)
 		if err != nil {
-			return versions, err
+			return nil, err
 		}
-
-		if page != lastPage {
-			resp, err = client.Get(endpoint + strconv.Itoa(page))
-			if err != nil {
-				return versions, err
-			}
-			defer resp.Body.Close()
-		}
-
-		for _, element := range rel {
-			v, err := version.NewVersion(element.Release)
-			if err != nil {
-				return versions, err
-			}
-
-			versions = append(versions, v)
-		}
+		versions = append(versions, pageVersions...)
+		logging.Debug("Processed page", "page", page, "of", lastPage, "with", len(pageVersions))
 	}
+	logging.Debug("Found releases", "count", len(versions), "over pages", lastPage)
 
 	return versions, nil
 }
