@@ -1,7 +1,11 @@
 ---
 name: Int Test MacOS
 
-on: [pull_request_target]
+on:
+  pull_request_target:
+  push:
+    branches:
+      - main
 
 jobs:
   int-test:
