@@ -9,11 +9,12 @@ import (
 )
 
 var BinaryDownloadURL string
+var BinaryDownloadURLs []string
 var VersionsAPI string
 var RootCmd = &cobra.Command{}
 var BinaryToInstall string
 var windowsSuffix string = ".exe"
-var logLevel string
+var logLevel = "info"
 var verbose bool
 
 func Execute() {

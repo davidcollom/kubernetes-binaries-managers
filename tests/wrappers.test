@@ -59,7 +59,7 @@ function setup() {
     teardownCallback=$(create_cluster)
   fi
 
-  run ./bin/ocenv install 4.7.0-0.okd-2021-07-03-190901
+  run ./bin/ocenv install 4.15.0-0.okd-2024-03-10-010116
   assert_success
   run ./bin/oc-wrapper create deployment hello-node-oc --image=k8s.gcr.io/echoserver:1.4
   assert_success

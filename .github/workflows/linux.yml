@@ -25,5 +25,7 @@ jobs:
           go-version-file: go.mod
         id: go
       - uses: engineerd/setup-kind@v0.6.2
-      - name: Run int tests
-        run: sudo apt-get update && sudo apt-get install bats -y && make int-test
+      - name: Setup Bats
+        run: sudo apt-get update && sudo apt-get install bats -y
+      - name: Run Tests
+        run: make int-test

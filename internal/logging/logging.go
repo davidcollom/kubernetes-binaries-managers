@@ -78,15 +78,18 @@ func Debug(msg string, args ...any) { L.WithFields(toFields(args...)).Debug(msg)
 func Info(msg string, args ...any)  { L.WithFields(toFields(args...)).Info(msg) }
 func Warn(msg string, args ...any)  { L.WithFields(toFields(args...)).Warn(msg) }
 func Error(msg string, args ...any) { L.WithFields(toFields(args...)).Error(msg) }
+func Fatal(msg string, args ...any) { L.WithFields(toFields(args...)).Fatal(msg) }
 
 // Formatted logging helpers
 func Debugf(format string, args ...any) { L.Debugf(format, args...) }
 func Infof(format string, args ...any)  { L.Infof(format, args...) }
 func Warnf(format string, args ...any)  { L.Warnf(format, args...) }
 func Errorf(format string, args ...any) { L.Errorf(format, args...) }
+func Fatalf(format string, args ...any) { L.Fatalf(format, args...) }
 
 // Context-aware helpers (ctx is unused in logrus core, kept for API convenience)
 func DebugContext(ctx context.Context, msg string, args ...any) { Debug(msg, args...) }
 func InfoContext(ctx context.Context, msg string, args ...any)  { Info(msg, args...) }
 func WarnContext(ctx context.Context, msg string, args ...any)  { Warn(msg, args...) }
 func ErrorContext(ctx context.Context, msg string, args ...any) { Error(msg, args...) }
+func FatalContext(ctx context.Context, msg string, args ...any) { Fatal(msg, args...) }

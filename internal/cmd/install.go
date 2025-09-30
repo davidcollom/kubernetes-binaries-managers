@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/binary"
 	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers"
@@ -18,10 +17,11 @@ import (
 func install(cmd *cobra.Command, args []string) { // nolint:funlen
 	var (
 		err    error
-		osArch string
+		osArch *helpers.OSArch
 	)
 
 	var version string
+	var body []byte
 
 	logging.Debug("install called", "args", args)
 
@@ -71,14 +71,16 @@ func install(cmd *cobra.Command, args []string) { // nolint:funlen
 	fileName := fmt.Sprintf("%s/.bin/%s-v%s", home, BinaryToInstall, version)
 	fileName, _ = filepath.Abs(fileName)
 
-	if strings.Contains(osArch, "windows") {
+	if osArch.IsWindows() {
 		fileName += windowsSuffix
 	}
+
 	// Check if binary exists locally
 	if helpers.FileExists(fileName) {
-		fmt.Printf("The version %s is already installed!\n", version)
+		logging.Infof("The version %s is already installed!\n", version)
 		os.Exit(0)
 	}
+
 	// Download binary
 	logging.Info("downloading binary", "version", version)
 	body, err := binary.Download(version, BinaryDownloadURL)
@@ -102,6 +104,7 @@ func install(cmd *cobra.Command, args []string) { // nolint:funlen
 	err = binary.Save(fileName, body)
 
 	helpers.CheckGenericError(err)
+
 	logging.Info("binary saved", "path", fileName)
 	fmt.Printf("Done! Saving it at %s.\n", fileName)
 }

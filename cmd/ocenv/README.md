@@ -115,13 +115,16 @@ You can still install binaries if you know the version you want, thought.
 
 ```bash
 $ ocenv list remote
-4.7.0-0.okd-2021-07-03-190901
-4.7.0-0.okd-2021-06-19-191547
-4.7.0-0.okd-2021-06-13-090745
-4.7.0-0.okd-2021-06-04-191031
-4.7.0-0.okd-2021-05-22-050008
-4.7.0-0.okd-2021-04-24-103438
-4.7.0-0.okd-2021-04-11-124433
+4.15.0-0.okd-2024-03-10-010116
+4.15.0-0.okd-2024-02-23-163410
+4.15.0-0.okd-2024-02-10-035534
+4.15.0-0.okd-2024-01-27-070424
+4.14.0-0.okd-2024-01-26-175629
+4.14.0-0.okd-2024-01-06-084517
+4.14.0-0.okd-2023-12-01-225814
+4.14.0-0.okd-2023-11-14-101924
+4.14.0-0.okd-2023-11-12-042703
+4.14.0-0.okd-2023-10-28-073550
 ...
 ```
 
@@ -129,35 +132,30 @@ $ ocenv list remote
 
 ```bash
 $ ocenv list local
-4.7.0-0.okd-2021-07-03-190901
-4.7.0-0.okd-2021-06-19-191547
-4.7.0-0.okd-2021-06-13-090745
-4.7.0-0.okd-2021-06-04-191031
-4.7.0-0.okd-2021-05-22-050008
-4.7.0-0.okd-2021-04-24-103438
-4.7.0-0.okd-2021-04-11-124433
+4.15.0-0.okd-2024-03-10-010116
+4.15.0-0.okd-2024-02-10-035534
 ```
 
 ### Install version
 
 ```bash
-$ ocenv install 4.7.0-0.okd-2021-07-03-190901
+$ ocenv install 4.14.0-0.okd-2024-01-06-084517
 Downloading binary...
-Done! Saving it at /home/user/.bin/oc-4.7.0-0.okd-2021-07-03-190901
+Done! Saving it at /home/user/.bin/oc-4.14.0-0.okd-2024-01-06-084517
 ```
 
 ### Use version
 
 ```bash
-$ ocenv use 4.7.0-0.okd-2021-07-03-190901
-Done! Using 4.7.0-0.okd-2021-07-03-190901 version.
+$ ocenv use 4.14.0-0.okd-2024-01-06-084517
+Done! Using 4.14.0-0.okd-2024-01-06-084517 version.
 ```
 
 ### Uninstall version
 
 ```bash
-$ ocenv uninstall 4.7.0-0.okd-2021-07-03-190901
-Done! 4.7.0-0.okd-2021-07-03-190901 version uninstalled from /home/ap/.bin/oc-4.7.0-0.okd-2021-07-03-190901.
+$ ocenv uninstall 4.14.0-0.okd-2024-01-06-084517
+Done! 4.14.0-0.okd-2024-01-06-084517 version uninstalled from /home/ap/.bin/oc-4.14.0-0.okd-2024-01-06-084517.
 ```
 
 ## License

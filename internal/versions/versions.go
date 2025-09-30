@@ -17,7 +17,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-version"
-	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers" // nolint:staticcheck
+	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers" // nolint:staticcheck
 	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/logging"
 	"github.com/mitchellh/go-homedir"
 )
@@ -143,7 +143,7 @@ func GetRemoteVersions(endpoint string) ([]*version.Version, error) {
 		nextRoundTripper: http.DefaultTransport,
 	}
 
-	client.Logger = nil
+	client.Logger = logging.L
 
 	// Fetch the first page
 	logging.Debug("fetching first page", "endpoint", endpoint+"1")
@@ -162,7 +162,7 @@ func GetRemoteVersions(endpoint string) ([]*version.Version, error) {
 		return nil, errors.New("request to Github's API failed with 403 Forbidden")
 	}
 
-	lastPage, err := GetLastPage(resp.Header.Get("Link"))
+	lastPage, err := helpers.GetLastPage(resp.Header.Get("Link"))
 	if err != nil {
 		return nil, err
 	}

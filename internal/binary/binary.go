@@ -12,6 +12,7 @@ import (
 
 	"path/filepath"
 
+	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers"
 	. "github.com/little-angry-clouds/kubernetes-binaries-managers/internal/helpers" // nolint:staticcheck
 	"github.com/little-angry-clouds/kubernetes-binaries-managers/internal/logging"
 	"github.com/mholt/archives"
@@ -23,6 +24,12 @@ const (
 	targz = ".tar.gz"
 	exe   = ".exe"
 )
+
+var osArch *helpers.OSArch
+
+func init() {
+	osArch, _ = helpers.GetOSArch()
+}
 
 type DownloadError struct {
 	Err  string
@@ -43,46 +50,39 @@ func (e *DownloadError) Error() string {
 
 func Download(version string, url string) ([]byte, error) { // nolint: funlen
 	var (
-		osArch string
-		err    error
-		body   []byte
-
-		errorCodeFail = 404
-		errorCodePass = 200
+		err  error
+		body []byte
 	)
 
 	// Don't control the error since at this point it should be controlled
-	osArch, _ = GetOSArch()
-	os := strings.Split(osArch, "/")[0]
-	arch := strings.Split(osArch, "/")[1]
 
 	if strings.Contains(url, "openshift") {
-		// They use mac instead of darwin in the url
-		switch os {
-		case "darwin":
-			os = "mac"
-		case "windows":
+		// OpenShift use different naming for macOS
+		if osArch.IsDarwin() {
+			osArch.OS = "mac"
+		} else if osArch.IsWindows() {
+			// They also use zip for Windows
 			url = strings.Replace(url, ".tar.gz", ".zip", 1)
 		}
 
-		url = fmt.Sprintf(url, version, os, version)
+		url = fmt.Sprintf(url, version, osArch.OS, version)
 	} else {
-		url = fmt.Sprintf(url, version, os, arch)
+		url = fmt.Sprintf(url, version, osArch.OS, osArch.Arch)
 	}
 
 	if strings.Contains(url, "helm") {
-		if strings.Contains(osArch, "windows") {
+		if osArch.IsWindows() {
 			url += zip
 		} else {
 			url += targz
 		}
 	} else if strings.Contains(url, "kubectl") {
-		if strings.Contains(osArch, "windows") {
+		if osArch.IsWindows() {
 			url += exe
 		}
 	}
 
-	fmt.Println("Downloading binary...")
+	logging.Debug("Downloading binary...", "url", url)
 
 	resp, err := http.Get(url) // nolint
 	if err != nil {
@@ -96,9 +96,9 @@ func Download(version string, url string) ([]byte, error) { // nolint: funlen
 		return body, err
 	}
 
-	if resp.StatusCode == errorCodeFail {
+	if resp.StatusCode == http.StatusNotFound {
 		return body, &DownloadError{"binary not found", url, string(body)}
-	} else if resp.StatusCode != errorCodePass {
+	} else if resp.StatusCode != http.StatusOK {
 		return body, &DownloadError{"unhandled error", url, string(body)}
 	}
 
@@ -119,11 +119,13 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 		// clean temp dir
 		defer os.RemoveAll(tempDir)
 
-		osArch, _ := GetOSArch()
-		file := fmt.Sprintf("%s/helm", tempDir)
-		file, _ = filepath.Abs(file)
+		osArch, err := GetOSArch()
+		if err != nil {
+			return err
+		}
+		file := filepath.Join(tempDir, "helm")
 
-		if strings.Contains(osArch, "windows") {
+		if osArch.IsWindows() {
 			fileExt = zip
 		} else {
 			fileExt = targz
@@ -139,11 +141,9 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 			return err
 		}
 
-		OS := strings.Split(osArch, "/")[0]
-		arch := strings.Split(osArch, "/")[1]
-		path, _ := filepath.Abs(file + fmt.Sprintf("/%s-%s/helm", OS, arch))
+		path, _ := filepath.Abs(file + fmt.Sprintf("/%s-%s/helm", osArch.OS, osArch.Arch))
 
-		if strings.Contains(osArch, "windows") {
+		if osArch.IsWindows() {
 			path += exe
 		}
 
@@ -164,11 +164,9 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 
 		logging.Debug("created temp dir", "path", tempDir)
 
-		osArch, _ := GetOSArch()
-		file := fmt.Sprintf("%s/oc", tempDir)
-		file, _ = filepath.Abs(file)
+		file := filepath.Join(tempDir, "oc")
 
-		if strings.Contains(osArch, "windows") {
+		if osArch.IsWindows() {
 			fileExt = zip
 		} else {
 			fileExt = targz
@@ -181,14 +179,14 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 			return err
 		}
 
-		err = decompress(file+fileExt, file)
+		err = decompress(file+fileExt, tempDir)
 		if err != nil {
 			return err
 		}
 
-		path, _ := filepath.Abs(file + "/oc")
+		path, _ := filepath.Abs(tempDir + "/oc")
 
-		if strings.Contains(osArch, "windows") {
+		if osArch.IsWindows() {
 			path += exe
 		}
 
@@ -207,7 +205,7 @@ func Save(fileName string, body []byte) error { // nolint: funlen
 }
 
 func decompress(file, destination string) error {
-	l := logging.L.WithField("method", "decompress")
+	l := logging.L.WithFields(logrus.Fields{"method": "decompress", "file": file, "destination": destination})
 
 	fsys, err := archives.FileSystem(context.Background(), file, nil)
 	if err != nil {
@@ -236,7 +234,7 @@ func decompress(file, destination string) error {
 			return fs.SkipDir
 		}
 
-		// No Need to extract directories, just files
+		// No Need to extract directories, just files, but we make the directory, anyway...
 		if d.IsDir() {
 			l.WithFields(logrus.
 				Fields{"path": path, "name": d.Name()},
@@ -257,7 +255,9 @@ func decompress(file, destination string) error {
 		}
 		defer f.Close()
 
-		l.Debug("reading file in archive")
+		l.WithFields(
+			logrus.Fields{"path": path, "name": d.Name()},
+		).Debug("reading file in archive")
 
 		data, err := io.ReadAll(f)
 		if err != nil {

@@ -119,10 +119,19 @@ You can still install binaries if you know the version you want, thought.
 
 ```bash
 $ helmenv list remote
-1.18.2
-1.18.1
-1.18.0
-1.17.5
+3.19.0
+3.18.6
+3.18.5
+3.18.4
+3.18.3
+3.18.2
+3.18.1
+3.18.0
+3.17.4
+3.17.3
+3.17.2
+3.17.1
+3.17.0
 ...
 ```
 
@@ -130,31 +139,30 @@ $ helmenv list remote
 
 ```bash
 $ helmenv list local
-1.18.0
-1.16.4
-1.14.8
+3.19.0
+3.16.3
 ```
 
 ### Install version
 
 ```bash
-$ helmenv install 1.16.5
+$ helmenv install 3.17.1
 Downloading binary...
-Done! Saving it at /home/user/.bin/kubectl-v1.16.5
+Done! Saving it at /home/user/.bin/helm-v3.17.1
 ```
 
 ### Use version
 
 ```bash
-$ helmenv use 1.16.5
-Done! Using 1.16.5 version.
+$ helmenv use 3.17.1
+Done! Using 3.17.1 version.
 ```
 
 ### Uninstall version
 
 ```bash
-$ helmenv uninstall 1.16.5
-Done! 1.16.5 version uninstalled from /home/ap/.bin/kubectl-v1.16.5.
+$ helmenv uninstall 3.17.1
+Done! 3.17.1 version uninstalled from /home/ap/.bin/helm-v3.17.1.
 ```
 
 ## FAQ
@@ -190,9 +198,9 @@ beehaviours are:
 - You don't have to set the `v` before the versions. For example:
 
 ```bash
-$ helmenv install v2.0.1
+$ helmenv install v3.17.1
 # Would be
-$ helmenv install 2.0.1
+$ helmenv install 3.17.1
 ```
 
 - The listing commands have been separed:
@@ -212,17 +220,17 @@ Just create a `.helm_version` in your directory pointing to the version you want
 to use. For example:
 
 ```bash
-$ helmenv install 2.14.3
+$ helmenv install 3.17.1
 ...
-$ helmenv install 2.14.2
+$ helmenv install 3.17.0
 ...
-$ helmenv use 2.14.3
+$ helmenv use 3.17.1
 ...
 $ helm version --client
-Client: &version.Version{SemVer:"v2.14.3", GitCommit:"0e7f3b6637f7af8fcfddb3d2941fcc7cbebb0085", GitTreeState:"clean"}
-$ echo 2.14.2 > .helm_version
+version.BuildInfo{Version:"v3.17.0", GitCommit:"301108edc7ac2a8ba79e4ebf5701b0b6ce6a31e4", GitTreeState:"clean", GoVersion:"go1.23.4"}
+$ echo 3.17.1 > .helm_version
 $ helm version --client
-Client: &version.Version{SemVer:"v2.14.2", GitCommit:"a8b13cc5ab6a7dbef0a58f5061bcc7c0c61598e7", GitTreeState:"clean"}
+Client: &version.Version{SemVer:"v3.17.1", GitCommit:"a8b13cc5ab6a7dbef0a58f5061bcc7c0c61598e7", GitTreeState:"clean"}
 ```
 
 ## License

@@ -45,7 +45,7 @@ func retryPolicy(ctx context.Context, resp *http.Response, err error) (bool, err
 	// Add custom logic for rate limiting status codes.
 	if resp != nil {
 		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
-			// Only retry if the rate limit headers suggest a future reset.
+			// Only retry if the rate limit headers suggests a future reset.
 			if resp.Header.Get("X-Ratelimit-Remaining") == "0" {
 				return true, nil
 			}

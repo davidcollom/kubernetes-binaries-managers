@@ -115,15 +115,18 @@ Use "kbenv [command] --help" for more information about a command.
 
 This option uses Github API to paginate all versions. Github API has some usage
 limitations. It usually works, but if you happen to do a lot of requests to
-github or are on an office or similar, chances are that this command will fail.
+GitHub or are on an office or similar, chances are that this command will fail.
 You can still install binaries if you know the version you want, thought.
 
 ```bash
 $ kbenv list remote
-1.18.2
-1.18.1
-1.18.0
-1.17.5
+1.34.1
+1.34.0
+1.33.5
+1.33.4
+1.33.3
+1.33.2
+1.33.1
 ...
 ```
 
@@ -131,24 +134,27 @@ $ kbenv list remote
 
 ```bash
 $ kbenv list local
-1.18.0
-1.16.4
-1.14.8
+1.34.1
+1.34.0
+1.33.0
+1.32.6
+1.31.0
+1.30.0
 ```
 
 ### Install version
 
 ```bash
-$ kbenv install 1.16.5
+$ kbenv install 1.33.0
 Downloading binary...
-Done! Saving it at /home/user/.bin/kubectl-v1.16.5
+Done! Saving it at /home/user/.bin/kubectl-v1.33.0
 ```
 
 ### Use version
 
 ```bash
-$ kbenv use 1.16.5
-Done! Using 1.16.5 version.
+$ kbenv use 1.32.6
+Done! Using 1.32.6 version.
 ```
 
 To use the automatic detection of the cluster and forget about it, just set it
@@ -162,8 +168,8 @@ Done! Using auto version.
 ### Uninstall version
 
 ```bash
-$ kbenv uninstall 1.16.5
-Done! 1.16.5 version uninstalled from /home/ap/.bin/kubectl-v1.16.5.
+$ kbenv uninstall 1.32.6
+Done! 1.32.6 version uninstalled from /home/ap/.bin/kubectl-v1.32.6.
 ```
 
 ## FAQ

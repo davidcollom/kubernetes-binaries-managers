@@ -111,7 +111,7 @@ func contains(arr []string, str string) bool {
 	return false
 }
 
-func GetOSArch() (string, error) {
+func GetOSArch() (*OSArch, error) {
 	var (
 		supportedOS   = []string{"linux", "windows", "darwin"}
 		supportedArch = []string{"arm", "arm64", "amd64"}
@@ -120,14 +120,28 @@ func GetOSArch() (string, error) {
 	)
 
 	if !contains(supportedOS, os) {
-		return "", &OSArchError{"os not supported", os, ""}
+		return nil, &OSArchError{"os not supported", os, ""}
 	}
 
 	if !contains(supportedArch, arch) {
-		return "", &OSArchError{"arch not supported", "", arch}
+		return nil, &OSArchError{"arch not supported", "", arch}
 	}
 
-	osArch := os + "/" + arch
+	return &OSArch{OS: os, Arch: arch}, nil
+}
 
-	return osArch, nil
+type OSArch struct {
+	OS   string
+	Arch string
+}
+
+func (os *OSArch) String() string {
+	return fmt.Sprintf("%s/%s", os.OS, os.Arch)
+}
+
+func (os *OSArch) IsWindows() bool {
+	return strings.Contains(os.String(), "windows")
+}
+func (os *OSArch) IsDarwin() bool {
+	return strings.Contains(os.String(), "darwin")
 }
